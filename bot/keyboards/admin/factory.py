@@ -1,0 +1,7 @@
+from aiogram.filters.callback_data import CallbackData
+
+
+class ChannelsCallback(CallbackData, prefix='channel'):
+    action: str
+    id: int = 0
+    page: int
