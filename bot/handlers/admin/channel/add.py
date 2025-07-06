@@ -26,7 +26,7 @@ async def add_channel(
     message_id = (
         await call.message.edit_text(
             text=l10n.format_value("forward-me-message-from-channel"),
-            reply_markup=inline.cancel(callback_data, "main"),
+            reply_markup=inline.cancel(callback_data, "list"),
         )
     ).message_id
     await state.update_data(message_id=message_id)

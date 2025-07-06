@@ -5,6 +5,10 @@ from . import (
     list,
     add,
     settings,
+    interval,
+    limit,
+    deleting,
+    start,
 )
 from bot.filters.admin import AdminFilter
 
@@ -14,6 +18,10 @@ def reg_routers(dp: Dispatcher):
         list,
         add,
         settings,
+        interval,
+        limit,
+        deleting,
+        start,
     ]
     for handler in handlers:
         handler.router.message.filter(AdminFilter())

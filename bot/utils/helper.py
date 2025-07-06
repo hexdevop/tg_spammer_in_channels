@@ -37,9 +37,9 @@ async def delete_message(bot: Bot, user_id: int, message_id: int):
 
 
 async def send_post(
-    bot: Bot,
-    post: Post,
-    chat_id: int,
+        bot: Bot,
+        post: Post,
+        chat_id: int,
 ):
     if post.media_type == MediaType.TEXT:
         return await bot.send_message(
@@ -65,28 +65,43 @@ async def send_post(
     return await send_method(**params)
 
 
-
-async def spamming(bot: Bot, scheduler: AsyncIOScheduler, l10n: FluentLocalization, chat_id: int, post_id: int):
+async def spamming(bot: Bot, scheduler: AsyncIOScheduler, l10n: FluentLocalization, chat_id: int):
     async with get_session() as session:
         async with session.begin():
-            post = await session.scalar(select(Post).where(Post.id == post_id))
+            channel = await session.scalar(
+                select(Channel).where(Channel.chat_id == chat_id)
+            )
+            number = (channel.last_posted_number or 0) + 1
+            post = await session.scalar(
+                select(Post).where(
+                    Post.channel_id == channel.id,
+                    Post.number == number
+                )
+            )
             if not post:
-                return
+                post = await session.scalar(
+                    select(Post).where(
+                        Post.channel_id == channel.id,
+                        Post.number == 1
+                    )
+                )
+                channel.sent += 1
 
             job = scheduler.get_job(f"spam:{chat_id}")
 
             try:
-                if post.status == Status.WORKING and (post.limit == 0 or post.sent < post.limit):
-                    if post.last_message_id:
-                        await delete_message(bot, chat_id, post.last_message_id)
+                if channel.status == Status.WORKING and (channel.limit == 0 or channel.sent < channel.limit):
+                    if channel.last_message_id:
+                        await delete_message(bot, chat_id, channel.last_message_id)
 
                     message = await send_post(bot, post, chat_id)
-                    post.last_message_id = message.message_id
-                    post.sent += 1
+                    channel.last_message_id = message.message_id
+                    channel.last_posted_number = post.number
+
                 else:
                     if job:
                         job.remove()
-                    post.status = Status.STOPPED
+                    channel.status = Status.STOPPED
                 return
 
             except (TelegramForbiddenError, TelegramBadRequest) as e:
@@ -97,11 +112,7 @@ async def spamming(bot: Bot, scheduler: AsyncIOScheduler, l10n: FluentLocalizati
 
                 if job:
                     job.remove()
-                post.status = Status.STOPPED
-
-                channel = await session.scalar(
-                    select(Channel).where(Channel.chat_id == chat_id)
-                )
+                channel.status = Status.STOPPED
 
                 for admin_id in variables.admins:
                     await bot.send_message(

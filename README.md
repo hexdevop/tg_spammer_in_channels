@@ -44,7 +44,7 @@
 
 
 ```bash
-python main.py
+python list.py
 ```
 
 ## Структура проекта

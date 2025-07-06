@@ -3,15 +3,14 @@ from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fluent.runtime import FluentLocalization
-from sqlalchemy import select
+from sqlalchemy import select, update
 
-from bot.handlers.admin.posts.main import post_settings
+from bot.handlers.admin.channel.settings import channel_settings
 from bot.keyboards.admin import inline
 from bot.keyboards.admin.factory import ChannelsCallback
 from bot.utils import helper
 from database import get_session
-from database.models import Channel
-from database.models.admin import Post
+from database.models import Channel, Post
 from variables import Status
 
 router = Router()
@@ -24,7 +23,7 @@ async def start_posting(
         l10n: FluentLocalization,
 ):
     await call.message.edit_text(
-        text=l10n.format_value("select-posting-type"),
+        text=l10n.format_value("select-spamming-type"),
         reply_markup=inline.select_posting_type(callback_data),
     )
 
@@ -37,36 +36,61 @@ async def start_now(
         state: FSMContext,
         l10n: FluentLocalization,
 ):
+    later = callback_data.action.endswith('later')
+
     try:
-        later = callback_data.action.endswith('later')
-        async with get_session() as session:
-            async with session.begin():
+        async with get_session() as session, session.begin():
+            channel = await session.scalar(
+                select(Channel).where(Channel.id == callback_data.id)
+            )
+            number = (channel.last_posted_number or 0) + 1
+            post = await session.scalar(
+                select(Post).where(
+                    Post.channel_id == channel.id,
+                    Post.number == number
+                )
+            )
+            if not post:
                 post = await session.scalar(
-                    select(Post).where(Post.channel_id == callback_data.id)
+                    select(Post).where(
+                        Post.channel_id == channel.id,
+                        Post.number == 1
+                    )
                 )
-                chat_id = await session.scalar(
-                    select(Channel.chat_id).where(Channel.id == callback_data.id)
+                channel.sent += 1
+
+            if not post:
+                return await call.answer(
+                    text=l10n.format_value('no-post-found'),
+                    show_alert=True,
                 )
-                if not later:
-                    message = await helper.send_post(call.bot, post, chat_id)
-                    post.sent += 1
-                    post.last_message_id = message.message_id
-                post.status = Status.WORKING
-        job = scheduler.get_job(f"spam:{chat_id}")
+
+            if not later:
+                message = await helper.send_post(call.bot, post, channel.chat_id)
+                channel.last_message_id = message.message_id
+                channel.last_posted_number = post.number
+
+            channel.status = Status.WORKING
+
+        job_id = f"spam:{channel.chat_id}"
+        job = scheduler.get_job(job_id)
         if job:
             job.remove()
         scheduler.add_job(
-            id=f"spam:{chat_id}",
+            id=job_id,
             func=helper.spamming,
             trigger="interval",
-            seconds=post.interval,
-            kwargs={"chat_id": chat_id, "post_id": post.id},
+            seconds=channel.interval,
+            kwargs={"chat_id": channel.chat_id},
         )
-        return await post_settings(call, callback_data, state, l10n)
+
+        return await channel_settings(call, callback_data, state, l10n)
+
     except TelegramForbiddenError:
         text = l10n.format_value('bot-is-a-not-member-of-the-channel')
     except TelegramBadRequest:
         text = l10n.format_value('bot-dont-have-enough-rights')
+
     await call.message.edit_text(text=text)
 
 
@@ -80,14 +104,14 @@ async def stop_spamming(
 ):
     async with get_session() as session:
         async with session.begin():
-            post = await session.scalar(
-                select(Post).where(Post.channel_id == callback_data.id)
-            )
             chat_id = await session.scalar(
                 select(Channel.chat_id).where(Channel.id == callback_data.id)
             )
-            post.status = Status.STOPPED
+            await session.execute(
+                update(Channel).where(Channel.id == callback_data.id)
+                .values(status=Status.STOPPED)
+            )
     job = scheduler.get_job(f"spam:{chat_id}")
     if job:
         job.remove()
-    await post_settings(call, callback_data, state, l10n)
+    return await channel_settings(call, callback_data, state, l10n)

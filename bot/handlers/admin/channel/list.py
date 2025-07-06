@@ -32,8 +32,8 @@ async def my_channels_list(
     )
 
 
-@router.callback_query(ChannelsCallback.filter(F.action.in_({"main", "page"})))
-async def main_and_pagination(
+@router.callback_query(ChannelsCallback.filter(F.action.in_({"list", "page"})))
+async def back_to_list__and__pagination(
     call: types.CallbackQuery,
     callback_data: ChannelsCallback,
     state: FSMContext,

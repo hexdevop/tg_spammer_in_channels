@@ -1,2 +1,2 @@
-from .admin import Channel
+from .admin import Channel, Post
 from .base import Base

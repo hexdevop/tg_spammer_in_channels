@@ -2,16 +2,15 @@ from aiogram import types, Router, F
 from aiogram.fsm.context import FSMContext
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fluent.runtime import FluentLocalization
-from sqlalchemy import select, update
+from sqlalchemy import update, select
 
-from bot.handlers.admin.posts.main import post_settings
+from bot.handlers.admin.channel.settings import channel_settings
 from bot.keyboards.admin import inline
 from bot.keyboards.admin.factory import ChannelsCallback
 from bot.states import ChannelState
 from bot.utils import helper
 from database import get_session
 from database.models import Channel
-from database.models.admin import Post
 
 router = Router()
 
@@ -33,10 +32,10 @@ async def set_other_interval(
     await state.update_data(
         message_id=message_id, callback_data=callback_data.model_dump()
     )
-    await state.set_state(ChannelState.change_interval)
+    await state.set_state(ChannelState.interval)
 
 
-@router.message(ChannelState.change_interval, F.text)
+@router.message(ChannelState.interval, F.text)
 async def get_other_interval(
         message: types.Message,
         scheduler: AsyncIOScheduler,
@@ -51,26 +50,25 @@ async def get_other_interval(
         async with get_session() as session:
             async with session.begin():
                 await session.execute(
-                    update(Post)
-                    .where(Post.channel_id == callback_data.id)
+                    update(Channel)
+                    .where(Channel.id == callback_data.id)
                     .values(interval=interval)
                 )
-                chat_id, post_id = (await session.execute(
-                    select(Channel.chat_id, Post.id)
-                    .join(Post, Channel.id == Post.channel_id)
-                    .where(Channel.id == callback_data.id)
-                )).fetchone()
-        job = scheduler.get_job(f"spam:{chat_id}")
+                channel = await session.scalar(
+                    select(Channel).where(Channel.id == callback_data.id)
+                )
+        job_id = f"spam:{channel.chat_id}"
+        job = scheduler.get_job(job_id)
         if job:
             job.remove()
         scheduler.add_job(
-            id=f"spam:{chat_id}",
+            id=job_id,
             func=helper.spamming,
             trigger="interval",
-            seconds=interval,
-            kwargs={"chat_id": chat_id, "post_id": post_id},
+            seconds=channel.interval,
+            kwargs={"chat_id": channel.chat_id},
         )
-        await post_settings(message, callback_data, state, l10n)
+        await channel_settings(message, callback_data, state, l10n)
     else:
         message_id = (
             await message.answer(

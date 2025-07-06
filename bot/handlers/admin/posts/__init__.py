@@ -2,24 +2,18 @@ from aiogram import Dispatcher
 from loguru import logger
 
 from . import (
-    main,
+    list,
     add,
-    interval,
-    limit,
     other,
-    start,
 )
 from bot.filters.admin import AdminFilter
 
 
 def reg_routers(dp: Dispatcher):
     handlers = [
-        main,
+        list,
         add,
-        interval,
-        limit,
         other,
-        start,
     ]
     for handler in handlers:
         handler.router.message.filter(AdminFilter())
