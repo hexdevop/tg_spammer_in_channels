@@ -44,7 +44,7 @@ class Channel(Base):
                 "mention": self.mention,
                 "username": f"@{self.username}" if self.username else l10n.format_value("null"),
                 "count": count,
-                'to_the_end': count - self.last_posted_number + 1,
+                'to_the_end': count - (self.last_posted_number or 0) + 1,
                 'interval': self.interval,
                 'sent': self.sent,
                 'limit': self.limit,
