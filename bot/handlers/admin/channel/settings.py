@@ -3,21 +3,22 @@ from aiogram.fsm.context import FSMContext
 from fluent.runtime import FluentLocalization
 from sqlalchemy import select, delete
 
-from bot.handlers.admin.list import my_channels_list
+from bot.handlers.admin.channel.list import my_channels_list
 from bot.keyboards.admin import inline
 from bot.keyboards.admin.factory import ChannelsCallback
 from database import get_session
 from database.models import Channel
+from database.models.admin import Post
 
 router = Router()
 
 
 @router.callback_query(ChannelsCallback.filter(F.action == "settings"))
 async def channel_settings(
-    call: types.CallbackQuery,
-    callback_data: ChannelsCallback,
-    state: FSMContext,
-    l10n: FluentLocalization,
+        call: types.CallbackQuery,
+        callback_data: ChannelsCallback,
+        state: FSMContext,
+        l10n: FluentLocalization,
 ):
     await state.clear()
     async with get_session() as session:
@@ -56,7 +57,9 @@ async def confirm_deleting_channel(
     async with get_session() as session:
         async with session.begin():
             await session.execute(
+                delete(Post).where(Post.channel_id == callback_data.id)
+            )
+            await session.execute(
                 delete(Channel).where(Channel.id == callback_data.id)
             )
     await my_channels_list(call.message, state, l10n, callback_data.page, edit=True)
-

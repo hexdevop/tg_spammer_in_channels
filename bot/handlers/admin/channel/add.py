@@ -4,7 +4,7 @@ from aiogram.exceptions import TelegramForbiddenError
 from aiogram.fsm.context import FSMContext
 from fluent.runtime import FluentLocalization
 
-from bot.handlers.admin.list import my_channels_list
+from bot.handlers.admin.channel.list import my_channels_list
 from bot.keyboards.admin import inline
 from bot.keyboards.admin.factory import ChannelsCallback
 from bot.states import ChannelState
@@ -17,10 +17,10 @@ router = Router()
 
 @router.callback_query(ChannelsCallback.filter(F.action == "add"))
 async def add_channel(
-    call: types.CallbackQuery,
-    callback_data: ChannelsCallback,
-    state: FSMContext,
-    l10n: FluentLocalization,
+        call: types.CallbackQuery,
+        callback_data: ChannelsCallback,
+        state: FSMContext,
+        l10n: FluentLocalization,
 ):
     await state.clear()
     message_id = (
@@ -36,9 +36,9 @@ async def add_channel(
 
 @router.message(ChannelState.message_from_channel)
 async def forwarded_message(
-    message: types.Message,
-    state: FSMContext,
-    l10n: FluentLocalization,
+        message: types.Message,
+        state: FSMContext,
+        l10n: FluentLocalization,
 ):
     data = await state.get_data()
     await helper.delete_messages(message, data)
@@ -49,9 +49,9 @@ async def forwarded_message(
         try:
             member = await message.bot.get_chat_member(channel.id, message.bot.id)
             if (
-                member.status == ChatMemberStatus.ADMINISTRATOR
-                and member.can_post_messages
-                and member.can_delete_messages
+                    member.status == ChatMemberStatus.ADMINISTRATOR
+                    and member.can_post_messages
+                    and member.can_delete_messages
             ):
                 async with get_session() as session:
                     async with session.begin():

@@ -33,7 +33,7 @@ class Channel(Base):
             {
                 "chat_id": str(self.chat_id),
                 "mention": self.mention,
-                "username": self.username or l10n.format_value("null"),
+                "username": f"@{self.username}" or l10n.format_value("null"),
                 "created_at": self.created_at,
             },
         )

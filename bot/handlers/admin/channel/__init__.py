@@ -1,19 +1,23 @@
 from aiogram import Dispatcher
+from loguru import logger
 
 from . import (
-    channel,
-    posts,
-    unhandled,
+    list,
+    add,
+    settings,
 )
 from bot.filters.admin import AdminFilter
 
 
 def reg_routers(dp: Dispatcher):
     handlers = [
-        unhandled,
+        list,
+        add,
+        settings,
     ]
-    channel.reg_routers(dp)
-    posts.reg_routers(dp)
     for handler in handlers:
         handler.router.message.filter(AdminFilter())
         dp.include_router(handler.router)
+    logger.opt(colors=True).info(
+        f"<fg #ffb4aa>[admin.channels {len(handlers)} handlers imported]</>"
+    )
