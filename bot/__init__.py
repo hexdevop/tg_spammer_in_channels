@@ -10,7 +10,6 @@ from apscheduler_di import ContextSchedulerDecorator
 from fluent.runtime import FluentLocalization
 from redis.asyncio import Redis
 
-from bot.services import Cache
 from bot.utils import fluent_loader
 from config import config, Config
 
@@ -39,17 +38,15 @@ scheduler = ContextSchedulerDecorator(
 )
 languages = fluent_loader.get_fluent_localization()
 
-cache = Cache(Redis(host=config.redis.host, db=config.redis.cache), languages)
 
 scheduler.ctx.add_instance(bot, Bot)
-scheduler.ctx.add_instance(cache, Cache)
+scheduler.ctx.add_instance(scheduler, AsyncIOScheduler)
 scheduler.ctx.add_instance(languages["ru"], FluentLocalization)
 scheduler.ctx.add_instance(config, Config)
 
 dp = Dispatcher(
     storage=storage,
     scheduler=scheduler,
-    cache=cache,
-    languages=languages,
+    l10n=languages['ru'],
     config=config,
 )

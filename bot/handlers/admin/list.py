@@ -22,7 +22,7 @@ async def my_channels_list(
     await state.clear()
     async with get_session() as session:
         channels = (
-            await session.scalars(select(Channel).limit(8).offset((page - 1) * 8))
+            await session.scalars(select(Channel).limit(16).offset((page - 1) * 16))
         ).all()
         count = await session.scalar(select(func.count(Channel.id)))
     method = message.edit_text if edit else message.answer

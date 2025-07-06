@@ -1,14 +1,13 @@
 from aiogram import types, Router, F
 from aiogram.fsm.context import FSMContext
 from fluent.runtime import FluentLocalization
-from sqlalchemy import select, update, case, delete
+from sqlalchemy import select, delete
 
 from bot.handlers.admin.list import my_channels_list
 from bot.keyboards.admin import inline
 from bot.keyboards.admin.factory import ChannelsCallback
 from database import get_session
 from database.models import Channel
-from variables import Status
 
 router = Router()
 
@@ -27,32 +26,8 @@ async def channel_settings(
         )
     await call.message.edit_text(
         text=channel.settings(l10n),
-        reply_markup=inline.channel_settings(callback_data, channel),
+        reply_markup=inline.channel_settings(callback_data),
     )
-
-
-@router.callback_query(ChannelsCallback.filter(F.action == "status"))
-async def change_status(
-    call: types.CallbackQuery,
-    callback_data: ChannelsCallback,
-    state: FSMContext,
-    l10n: FluentLocalization,
-):
-    async with get_session() as session:
-        async with session.begin():
-            await session.execute(
-                update(Channel)
-                .where(Channel.id == callback_data.id)
-                .values(
-                    status=case(
-                        (Channel.status == Status.STOPPED, Status.WORKING.name),
-                        (Channel.status == Status.WORKING, Status.STOPPED.name),
-                        else_=Channel.status,
-                    )
-                )
-            )
-    await channel_settings(call, callback_data, state, l10n)
-
 
 
 @router.callback_query(ChannelsCallback.filter(F.action == 'delete'))

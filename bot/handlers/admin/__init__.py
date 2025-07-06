@@ -5,6 +5,7 @@ from . import (
     list,
     add,
     settings,
+    post,
     unhandled,
 )
 from bot.filters.admin import AdminFilter
@@ -15,6 +16,7 @@ def reg_routers(dp: Dispatcher):
         list,
         add,
         settings,
+        post,
         unhandled,
     ]
     for handler in handlers:

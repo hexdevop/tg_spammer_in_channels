@@ -18,8 +18,6 @@ class Channel(Base):
     title: Mapped[str]
     username: Mapped[str | None]
 
-    status: Mapped[Status] = mapped_column(default=Status.WORKING)
-
     created_at: Mapped[created_at]
     updated_at: Mapped[updated_at]
 
@@ -35,28 +33,30 @@ class Channel(Base):
             {
                 "chat_id": str(self.chat_id),
                 "mention": self.mention,
-                "username": self.username or l10n.format_value('null'),
-                "status": self.status.value,
+                "username": self.username or l10n.format_value("null"),
                 "created_at": self.created_at,
             },
         )
 
-# class Post(Base):
-#     __tablename__ = "posts"
-#
-#     id: Mapped[intpk]
-#
-#     channel_id: Mapped[int] = mapped_column(ForeignKey('channels.id'))
-#
-#     media_type: Mapped[MediaType]
-#     media: Mapped[str | None]
-#     text: Mapped[str] = mapped_column(Text)
-#     reply_markup: Mapped[dict[str, Any]]
-#
-#     interval: Mapped[int]
-#     count: Mapped[int] = mapped_column(default=0)
-#     limit: Mapped[int | None]
-#     status: Mapped[Status]
-#
-#     created_at: Mapped[created_at]
-#     updated_at: Mapped[updated_at]
+
+class Post(Base):
+    __tablename__ = "posts"
+
+    id: Mapped[intpk]
+
+    channel_id: Mapped[int] = mapped_column(ForeignKey("channels.id"))
+
+    media_type: Mapped[MediaType]
+    media: Mapped[str | None]
+    text: Mapped[str] = mapped_column(Text)
+    reply_markup: Mapped[dict[str, Any]]
+
+    interval: Mapped[int]
+    sent: Mapped[int] = mapped_column(default=0)
+    limit: Mapped[int | None] = mapped_column(default=0)
+    status: Mapped[Status] = mapped_column(default=Status.STOPPED)
+
+    last_message_id: Mapped[int | None]
+
+    created_at: Mapped[created_at]
+    updated_at: Mapped[updated_at]

@@ -21,7 +21,6 @@ channel-settings =
     Название: {$mention}
     Ссылка: {$username}
 
-    Статус: {$status}
     Дата добавления: {$created_at}</>
 
 confirm-deleting-channel = <i><b>😭 Подтвердите удаление канала {$mention}</></>
