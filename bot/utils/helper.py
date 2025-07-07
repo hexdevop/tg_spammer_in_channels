@@ -57,6 +57,7 @@ async def send_post(
         "chat_id": chat_id,
         media_attr: post.media,
         "reply_markup": post.reply_markup,
+        "parse_mode": "HTML",
     }
 
     if post.media_type not in [MediaType.VIDEO_NOTE, MediaType.STICKER]:
